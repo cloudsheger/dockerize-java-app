@@ -1,0 +1,58 @@
+pipeline { 
+
+    environment { 
+
+        registry = "cloudsheger/docker-app-java" 
+
+        registryCredential = 'dockerhub-Jenkins-integration' 
+
+        dockerImage = '' 
+
+    }
+
+    agent any 
+
+        stage('Building our image') { 
+
+            steps { 
+
+                script { 
+
+                    sh 'docker build -t petclinic-app -f .devcontainer/'
+
+                }
+
+            } 
+
+        }
+
+        stage('Deploy our image') { 
+
+            steps { 
+
+                script { 
+
+                    docker.withRegistry( '', registryCredential ) { 
+
+                        dockerImage.push() 
+
+                    }
+
+                } 
+
+            }
+
+        } 
+
+        stage('Cleaning up') { 
+
+            steps { 
+
+                sh "docker rmi $registry:$BUILD_NUMBER" 
+
+            }
+
+        } 
+
+    }
+}
