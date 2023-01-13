@@ -33,9 +33,8 @@ pipeline {
                 script { 
 
                     docker.withRegistry( '', registryCredential ) { 
-
-                        dockerImage.push() 
-
+                        sh 'docker tag petclinic-app cloudsheger/docker-app-java'
+                        sh 'docker push cloudsheger/docker-app-java'
                     }
 
                 } 
