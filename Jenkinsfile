@@ -1,6 +1,13 @@
 pipeline {
     agent any
     stages {
+        stage ('Unit Test') {
+            steps{
+                
+                sh "mvn test"
+
+            }
+        }
         stage('Build') {
             steps {
                 // Get some code from a GitHub repository
