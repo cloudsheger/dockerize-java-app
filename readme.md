@@ -10,8 +10,8 @@ Petclinic is a [Spring Boot](https://spring.io/guides/gs/spring-boot) applicatio
 "This is okay this "
 
 ```
-git clone https://github.com/spring-projects/spring-petclinic.git
-cd spring-petclinic
+git clone https://github.com/cloudsheger/dockerize-java-app.git
+cd dockerize-java-app
 ./mvnw package
 java -jar target/*.jar
 ```
