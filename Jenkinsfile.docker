@@ -2,29 +2,74 @@ pipeline {
     agent any
     
     environment {
-        DOCKER_HUB_USERNAME = credentials('docker-hub-username')
-        DOCKER_HUB_PASSWORD = credentials('docker-hub-password')
+        DOCKER_HUB_CREDENTIALS = credentials('docker-hub-credentials') // Create Docker Hub credentials in Jenkins
+        SLACK_CHANNEL = '#build-status'
     }
+
     stages {
-        stage('Build') {
+        stage('Checkout') {
             steps {
-                sh 'docker build -t my-image .'
+                checkout scm
             }
         }
-        stage('Deploy') {
+
+        stage('Build Docker Image') {
             steps {
-                withCredentials([string(credentialsId: 'docker-hub-username', variable: 'DOCKER_HUB_USERNAME'),
-                                 string(credentialsId: 'docker-hub-password', variable: 'DOCKER_HUB_PASSWORD')]) {
-                    sh 'docker login -u $DOCKER_HUB_USERNAME -p $DOCKER_HUB_PASSWORD'
-                    sh 'docker push my-image'
+                script {
+                    def customImageName = "cloudsheger/simple-java-app:${env.BUILD_NUMBER}"
+                    
+                    sh "docker build -t $customImageName ."
                 }
             }
         }
-        stage('Restart Container') {
+
+        stage('Push to Docker Hub') {
             steps {
-                sh 'docker stop my-container'
-                sh 'docker rm my-container'
-                sh 'docker run -d --name my-container my-image'
+                script {
+                    withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'docker-hub-credentials', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASSWORD']]) {
+                        def customImageName = "your-docker-hub-username/your-app:${env.BUILD_NUMBER}"
+                        
+                        sh "docker login -u $DOCKERHUB_USER -p $DOCKERHUB_PASSWORD"
+                        sh "docker push $customImageName"
+                    }
+                }
+            }
+        }
+
+        stage('Send Slack Alert') {
+            when {
+                expression { currentBuild.resultIsBetterOrEqualTo('FAILURE') }
+            }
+            steps {
+                script {
+                    slackSend(
+                        color: 'danger',
+                        channel: env.SLACK_CHANNEL,
+                        message: "Build failed: ${env.JOB_NAME} - Build #${env.BUILD_NUMBER}\n${env.BUILD_URL}",
+                        tokenCredentialId: 'slack-token'
+                    )
+                }
+            }
+        }
+
+        stage('Clean Up Docker Images') {
+            steps {
+                script {
+                    sh 'docker system prune -f'
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            script {
+                slackSend(
+                    color: 'good',
+                    channel: env.SLACK_CHANNEL,
+                    message: "Build successful: ${env.JOB_NAME} - Build #${env.BUILD_NUMBER}\n${env.BUILD_URL}",
+                    tokenCredentialId: 'slack-token'
+                )
             }
         }
     }
